@@ -21,9 +21,6 @@ template Shrinkable<long long> integral<long long>(const Random &random,
 template Shrinkable<unsigned long long>
 integral<unsigned long long>(const Random &random, int size);
 
-template Shrinkable<float> real<float>(const Random &random, int size);
-template Shrinkable<double> real<double>(const Random &random, int size);
-
 Shrinkable<bool> boolean(const Random &random, int size) {
   return shrinkable::shrinkRecur(rc::detail::bitStreamOf(random).next<bool>(),
                                  &shrink::boolean);

@@ -3,6 +3,9 @@
 #include "rapidcheck/detail/BitStream.h"
 #include "rapidcheck/shrinkable/Create.h"
 #include "rapidcheck/shrink/Shrink.h"
+#include "rapidcheck/gen/Create.h"
+#include "rapidcheck/gen/Exec.h"
+#include "rapidcheck/gen/Select.h"
 #include "rapidcheck/gen/Transform.h"
 #include "rapidcheck/gen/detail/ScaleInteger.h"
 
@@ -35,22 +38,6 @@ extern template Shrinkable<long long> integral<long long>(const Random &random,
 extern template Shrinkable<unsigned long long>
 integral<unsigned long long>(const Random &random, int size);
 
-template <typename T>
-Shrinkable<T> real(const Random &random, int size) {
-  // TODO this implementation sucks
-  auto stream = rc::detail::bitStreamOf(random);
-  const double scale =
-      std::min(size, kNominalSize) / static_cast<double>(kNominalSize);
-  const double a = static_cast<double>(stream.nextWithSize<int64_t>(size));
-  const double b =
-      (stream.next<uint64_t>() * scale) / std::numeric_limits<uint64_t>::max();
-  const T value = static_cast<T>(a + b);
-  return shrinkable::shrinkRecur(value, &shrink::real<T>);
-}
-
-extern template Shrinkable<float> real<float>(const Random &random, int size);
-extern template Shrinkable<double> real<double>(const Random &random, int size);
-
 Shrinkable<bool> boolean(const Random &random, int size);
 
 template <typename T>
@@ -65,19 +52,35 @@ struct DefaultArbitrary {
   static Gen<T> arbitrary() { return integral<T>; }
 };
 
+template<typename T>
+constexpr auto genFloat () {
+  return weightedOneOf<T> ({
+    std::make_pair(24 , exec([](int a, int b, int c) -> T { return a + static_cast<T>(b) / (std::abs (static_cast<T>(c)) + 1); })),
+    std::make_pair(1  , just(-std::numeric_limits<T>::quiet_NaN())),
+//      std::make_pair(1  , just(-std::numeric_limits<T>::signaling_NaN())),
+    std::make_pair(1  , just(-std::numeric_limits<T>::infinity())),
+    std::make_pair(1  , just(std::numeric_limits<T>::infinity())),
+    std::make_pair(1  , just(std::numeric_limits<T>::min())),
+    std::make_pair(1  , just(static_cast<T>(-0.0))),  // In IEEE floats there's a negative 0 value
+    std::make_pair(1  , just(std::numeric_limits<T>::epsilon())),
+    std::make_pair(1  , just(static_cast<T>(0.0))),
+    std::make_pair(1  , just(std::numeric_limits<T>::max())),
+    });
+}
+
 template <>
 struct DefaultArbitrary<float> {
-  static Gen<float> arbitrary() { return real<float>; }
+  static Gen<float> arbitrary() { return genFloat<float>(); }
 };
 
 template <>
 struct DefaultArbitrary<double> {
-  static Gen<double> arbitrary() { return real<double>; }
+  static Gen<double> arbitrary() { return genFloat<double>(); }
 };
 
 template <>
 struct DefaultArbitrary<long double> {
-  static Gen<long double> arbitrary() { return real<long double>; }
+  static Gen<long double> arbitrary() { return genFloat<long double>(); }
 };
 
 template <>

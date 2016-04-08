@@ -166,17 +166,21 @@ template <typename T>
 Seq<T> real(T value) {
   std::vector<T> shrinks;
 
-  if (value != 0) {
+  if (std::isnan (value) || std::isinf (value)) {
     shrinks.push_back(0.0);
-  }
+  } else {
+    if (value != 0) {
+      shrinks.push_back(0.0);
+    }
 
-  if (value < 0) {
-    shrinks.push_back(-value);
-  }
+    if (value < 0) {
+      shrinks.push_back(-value);
+    }
 
-  T truncated = std::trunc(value);
-  if (std::abs(truncated) < std::abs(value)) {
-    shrinks.push_back(truncated);
+    T truncated = std::trunc(value);
+    if (std::abs(truncated) < std::abs(value)) {
+      shrinks.push_back(truncated);
+    }
   }
 
   return seq::fromContainer(shrinks);
